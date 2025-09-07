@@ -1,6 +1,5 @@
 
 
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -11,7 +10,7 @@
             background: transparent !important;
             margin: 0; 
             padding: 0;
-            font-family: 'Times New Roman', serif;
+            font-family: 'Georgia', serif;
             width: 100%;
             box-sizing: border-box;
         }
@@ -28,14 +27,15 @@
             font-size: 24px;
             font-variant: small-caps;
             letter-spacing: 2px;
-            text-shadow: 0 0 15px #f4d47f, 0 0 30px #ffd700;
+            text-shadow: 0 0 10px #8b6b4d, 0 0 20px #f4d47f;
+            font-weight: bold;
         }
         .prediction-box {
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(255, 255, 255, 0.9);
             padding: 25px;
             border-radius: 15px;
-            border: 3px solid #8b6b4d;
-            color: #e8e0c0;
+            border: 3px solid #000000;
+            color: #000000;
             margin: 15px 0;
             box-shadow: 0 0 30px rgba(139, 107, 77, 0.7);
             backdrop-filter: blur(3px);
@@ -44,29 +44,30 @@
             font-size: 20px;
             font-style: italic;
             line-height: 1.6;
-            text-shadow: 0 0 10px rgba(244, 212, 127, 0.5), 
-                         0 0 20px rgba(244, 212, 127, 极.3);
+            text-shadow: 0 0 8px #8b6b4d, 0 0 15px #f4d47f;
             min-height: 80px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-weight: 500;
         }
         .footer {
             font-size: 14px;
             color: #000000;
             font-style: italic;
             margin-top: 20px;
-            text-shadow: 0 0 5px rgba(184, 160, 112, 0.5);
+            text-shadow: 0 0 5px #8b6b4d;
         }
         .info {
             font-size: 12px;
             color: #000000;
             margin-top: 10px;
-            text-shadow: 0 0 3px rgba(139, 107, 77, 0.4);
+            text-shadow: 0 0 3px #8b6b4d;
+            font-weight: bold;
         }
         .magic-border {
             border: 2px solid transparent;
-            border-image: linear-gradient(45deg, #f4d47f, #8b6b4d, #f4d47f);
+            border-image: linear-gradient(45deg, #000000, #8b6b4d, #000000);
             border-image-slice: 1;
             border-radius: 12px;
         }
@@ -340,27 +341,47 @@
             "Сама судьба постучится в вашу дверь сегодня 🚪"
         ];
 
-        function getStablePrediction() {
+        function getUserDailyPrediction() {
             const today = new Date().toDateString();
-            const userAgent = navigator.userAgent.substring(0, 20);
+            const storageKey = 'oracle_daily_prediction';
             
-            const dailyKey = today + userAgent;
-            let hash = 0;
-            for (let i = 0; i < dailyKey.length; i++) {
-                hash = ((hash << 5) - hash) + dailyKey.charCodeAt(i);
-                hash = hash & hash;
+            try {
+                // Проверяем, есть ли уже предсказание на сегодня
+                const stored = localStorage.getItem(storageKey);
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    if (data.date === today) {
+                        return data.prediction; // Возвращаем сохраненное предсказание
+                    }
+                }
+                
+                // Генерируем новое уникальное предсказание
+                const randomIndex = Math.floor(Math.random() * predictions.length);
+                const newPrediction = predictions[randomIndex];
+                
+                // Сохраняем на весь день
+                localStorage.setItem(storageKey, JSON.stringify({
+                    date: today,
+                    prediction: newPrediction
+                }));
+                
+                return newPrediction;
+                
+            } catch (error) {
+                // Fallback: если localStorage не доступен
+                const today = new Date();
+                const seed = today.getDate() + today.getMonth();
+                return predictions[seed % predictions.length];
             }
-            
-            return Math.abs(hash) % predictions.length;
         }
 
         function updatePrediction() {
             const today = new Date();
-            const predictionIndex = getStablePrediction();
+            const prediction = getUserDailyPrediction();
             
-            document.getElementById('prediction').textContent = predictions[predictionIndex];
+            document.getElementById('prediction').textContent = prediction;
             document.getElementById('dateInfo').textContent = 
-                `Ваше предсказание на ${today.toLocaleDateString()} • Действует до полуночи`;
+                `Ваше персональное предсказание на ${today.toLocaleDateString()} • Действует до полуночи`;
         }
 
         updatePrediction();
