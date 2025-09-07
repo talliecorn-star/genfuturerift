@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -87,7 +88,7 @@
 
     <script>
         const predictions = [
-            "Драконы удачи пролетят над вашим замком сегодня 🐉",
+           "Драконы удачи пролетят над вашим замком сегодня 🐉",
             "Эльфы удачи пошлют вам фиалковый дождь из лепестков 🌸",
             "Феникс возрождения расправит крылья над вашей судьбой 🔥",
             "Гоблин украдёт ваши носки, но оставит золото 🧦",
@@ -341,45 +342,40 @@
             "Сама судьба постучится в вашу дверь сегодня 🚪"
         ];
 
-        function getUserDailyPrediction() {
+        async function getIPBasedPrediction() {
             const today = new Date().toDateString();
-            const storageKey = 'oracle_daily_prediction';
             
             try {
-                // Проверяем, есть ли уже предсказание на сегодня
-                const stored = localStorage.getItem(storageKey);
-                if (stored) {
-                    const data = JSON.parse(stored);
-                    if (data.date === today) {
-                        return data.prediction; // Возвращаем сохраненное предсказание
-                    }
+                // Получаем IP-адрес пользователя
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                const userIP = ipData.ip;
+                
+                // Создаем уникальный ключ на основе даты и IP
+                const uniqueKey = today + userIP;
+                
+                // Генерируем хэш для стабильного выбора
+                let hash = 0;
+                for (let i = 0; i < uniqueKey.length; i++) {
+                    hash = ((hash << 5) - hash) + uniqueKey.charCodeAt(i);
+                    hash = hash & hash;
                 }
                 
-                // Генерируем новое уникальное предсказание
-                const randomIndex = Math.floor(Math.random() * predictions.length);
-                const newPrediction = predictions[randomIndex];
-                
-                // Сохраняем на весь день
-                localStorage.setItem(storageKey, JSON.stringify({
-                    date: today,
-                    prediction: newPrediction
-                }));
-                
-                return newPrediction;
+                return Math.abs(hash) % predictions.length;
                 
             } catch (error) {
-                // Fallback: если localStorage не доступен
-                const today = new Date();
-                const seed = today.getDate() + today.getMonth();
-                return predictions[seed % predictions.length];
+                console.log('IP API не доступен, используем fallback');
+                // Fallback: используем время и случайные числа
+                const timeSeed = new Date().getHours() * 60 + new Date().getMinutes();
+                return (timeSeed + Math.floor(Math.random() * 1000)) % predictions.length;
             }
         }
 
-        function updatePrediction() {
+        async function updatePrediction() {
             const today = new Date();
-            const prediction = getUserDailyPrediction();
+            const predictionIndex = await getIPBasedPrediction();
             
-            document.getElementById('prediction').textContent = prediction;
+            document.getElementById('prediction').textContent = predictions[predictionIndex];
             document.getElementById('dateInfo').textContent = 
                 `Ваше персональное предсказание на ${today.toLocaleDateString()} • Действует до полуночи`;
         }
