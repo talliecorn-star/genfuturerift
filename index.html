@@ -238,82 +238,110 @@
             "В следующий раз, когда ты скажешь 'я готов', помни — магия любит посмеяться над твоими ожиданиями."
         ];
 
-        // Глобальная переменная для хранения IP
-        let userIP = '';
-
-        async function getIPBasedPrediction() {
-            const today = new Date().toDateString();
-            
-            try {
-                // Получаем IP-адрес пользователя
-                const ipResponse = await fetch('https://api.ipify.org?format=json');
-                
-                if (!ipResponse.ok) {
-                    throw new Error('Не удалось получить IP');
-                }
-                
-                const ipData = await ipResponse.json();
-                userIP = ipData.ip;
-                
-                // Создаем уникальный ключ на основе даты и IP
-                const uniqueKey = today + userIP;
-                
-                // Генерируем хэш для стабильного выбора
-                let hash = 0;
-                for (let i = 0; i < uniqueKey.length; i++) {
-                    hash = ((hash << 5) - hash) + uniqueKey.charCodeAt(i);
-                    hash = hash & hash;
-                }
-                
-                return Math.abs(hash) % predictions.length;
-                
-            } catch (error) {
-                console.log('IP API не доступен, используем fallback', error);
-                // Fallback: используем время и случайные числа
-                const timeSeed = new Date().getHours() * 60 + new Date().getMinutes();
-                return (timeSeed + Math.floor(Math.random() * 1000)) % predictions.length;
-            }
-        }
-
-        async function updatePrediction() {
-            try {
-                const today = new Date();
-                const predictionIndex = await getIPBasedPrediction();
-                
-                document.getElementById('prediction').textContent = predictions[predictionIndex];
-                document.getElementById('dateInfo').textContent = 
-                    `Ваше персональное предсказание на ${today.toLocaleDateString()} • Действует до полуночи`;
-                    
-            } catch (error) {
-                console.error('Ошибка при получении предсказания:', error);
-                document.getElementById('prediction').innerHTML = 
-                    '<span class="error-message">Ошибка загрузки предсказания.</span>';
-                document.getElementById('dateInfo').innerHTML =
-                    '<span class="error-message">Попробуйте снова</span>';
-                document.getElementById('retryBtn').style.display = 'block';
-            }
-        }
-
-        // Запускаем при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function() {
-            // Небольшая задержка для эффекта
-            setTimeout(updatePrediction, 1000);
-        });
+       // УНИВЕРСАЛЬНЫЙ СТАБИЛЬНЫЙ ИДЕНТИФИКАТОР
+function getUniversalStableId() {
+    let stableId = localStorage.getItem('universalOracleId');
+    
+    if (!stableId) {
+        // Создаем сложный ID из всего доступного
+        const components = [
+            navigator.language,
+            new Date().getTimezoneOffset(),
+            screen.width + 'x' + screen.height,
+            navigator.hardwareConcurrency || 'unknown',
+            navigator.deviceMemory || 'unknown',
+            performance.timeOrigin || 'unknown',
+            Math.random().toString(36).substr(2, 12)
+        ];
         
-        // Обработчик для кнопки повтора
-        document.getElementById('retryBtn').addEventListener('click', function() {
-            this.style.display = 'none';
-            document.getElementById('prediction').innerHTML = '<span class="loader"></span> Загрузка предсказания...';
-            document.getElementById('dateInfo').textContent = '';
+        // Генерируем хэш
+        let hash = 0;
+        for (let i = 0; i < components.length; i++) {
+            const str = components[i].toString();
+            for (let j = 0; j < str.length; j++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(j);
+                hash = hash & hash;
+            }
+        }
+        
+        stableId = 'magic-user-' + Math.abs(hash).toString(36);
+        localStorage.setItem('universalOracleId', stableId);
+    }
+    
+    return stableId;
+}
+
+// Функция для определения типа браузера
+function getBrowserType() {
+    const ua = navigator.userAgent;
+    if (ua.includes('Opera') || ua.includes('OPR/')) return 'opera';
+    if (ua.includes('Firefox')) return 'firefox';
+    if (ua.includes('Chrome')) return 'chrome';
+    if (ua.includes('Safari')) return 'safari';
+    if (ua.includes('Edg')) return 'edge';
+    return 'unknown';
+}
+
+// ОСНОВНАЯ ФУНКЦИЯ ДЛЯ ЛЮБОГО БРАУЗЕРА
+async function getUniversalPredictionIndex() {
+    const today = new Date().toDateString();
+    const browserType = getBrowserType();
+    
+    try {
+        // Всегда используем наш универсальный ID
+        const stableId = getUniversalStableId();
+        const uniqueKey = today + stableId + browserType;
+        
+        // Генерируем хэш
+        let hash = 0;
+        for (let i = 0; i < uniqueKey.length; i++) {
+            hash = ((hash << 5) - hash) + uniqueKey.charCodeAt(i);
+            hash = hash & hash;
+        }
+        
+        return Math.abs(hash) % predictions.length;
+        
+    } catch (error) {
+        console.log('Используем универсальный fallback');
+        // Максимально простой fallback
+        const now = new Date();
+        const timeSeed = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+        return (timeSeed + Math.floor(Math.random() * 100)) % predictions.length;
+    }
+}
+
+// Остальной код
+async function updatePrediction() {
+    try {
+        const today = new Date();
+        const predictionIndex = await getUniversalPredictionIndex();
+        
+        document.getElementById('prediction').textContent = predictions[predictionIndex];
+        document.getElementById('dateInfo').textContent = 
+            `Ваше персональное предсказание на ${today.toLocaleDateString()} • Действует до полуночи`;
             
-            // Небольшая задержка для эффекта
-            setTimeout(updatePrediction, 800);
-        });
-    </script>
-</body>
+    } catch (error) {
+        console.error('Ошибка:', error);
+        document.getElementById('prediction').innerHTML = 
+            '<span class="error-message">Магия требует настройки</span>';
+        document.getElementById('dateInfo').innerHTML =
+            '<span class="error-message">Обновите страницу</span>';
+        document.getElementById('retryBtn').style.display = 'block';
+    }
+}
 
-</html>
+// Запускаем
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(updatePrediction, 800);
+});
 
+document.getElementById('retryBtn').addEventListener('click', function() {
+    this.style.display = 'none';
+    document.getElementById('prediction').innerHTML = '<span class="loader"></span> Загрузка предсказания...';
+    document.getElementById('dateInfo').textContent = '';
+    setTimeout(updatePrediction, 600);
+});
+</script>
 
 
 
